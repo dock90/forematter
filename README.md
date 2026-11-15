@@ -18,7 +18,7 @@ file.content; // '# Hello\n'
 ## Why use it
 
 - **Zero dependencies.** gray-matter installs 9 other packages. forematter installs none: it has its own YAML parser.
-- **Fast.** 3 to 12 times faster than gray-matter at reading (see below).
+- **Fast.** 8 to 12 times faster than gray-matter on real sites (see below).
 - **Safe.** It never runs code from a file, and it is built to withstand input designed to hang a parser or tamper with your objects.
 - **Compatible.** On 17,436 real pages from the Astro docs and MDN, it returns exactly what gray-matter returns for every one.
 - **Modern.** TypeScript types included, ES modules, Node 18 and newer.
@@ -76,16 +76,9 @@ Also exported: `stringify`, `test`, `language`, `parseYaml`, `stringifyYaml` and
 
 ## Speed
 
-Documents per second on an Apple M4 Pro with Node 25, against gray-matter 4.0.3:
+On real sites, forematter is 8 to 12 times faster than gray-matter 4.0.3. It parses all 14,768 pages of [MDN content](https://github.com/mdn/content) in 10 ms against 80 ms, and all 2,668 pages of the [Astro docs](https://github.com/withastro/docs) in 2 ms against 23 ms.
 
-| | gray-matter | forematter | |
-| --- | ---: | ---: | ---: |
-| Typical blog post | 108,998 | 453,914 | 4.2x |
-| Three fields | 459,198 | 2,958,580 | 6.4x |
-| 205 lines of front matter | 12,195 | 41,376 | 3.4x |
-| Writing a blog post | 109,792 | 302,862 | 2.8x |
-
-On real sites the gap is wider: all 14,768 MDN pages parse in 10 ms against 80 ms, and all 2,668 Astro docs pages in 2 ms against 23 ms.
+Measured on an Apple M4 Pro with Node 25, parsing every markdown file already loaded in memory, best of 7 passes.
 
 ## Safety
 
