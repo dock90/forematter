@@ -1,9 +1,0 @@
-{
-	"name": "forematter-bench",
-	"private": true,
-	"type": "module",
-	"description": "Comparison benchmarks and differential tests. Kept separate so the library itself has no dependencies.",
-	"dependencies": {
-		"gray-matter": "4.0.3"
-	}
-}

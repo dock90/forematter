@@ -87,8 +87,6 @@ Documents per second on an Apple M4 Pro with Node 25, against gray-matter 4.0.3:
 
 On real sites the gap is wider: all 14,768 MDN pages parse in 10 ms against 80 ms, and all 2,668 Astro docs pages in 2 ms against 23 ms.
 
-Reproduce the table with `node bench/bench.js` (see the top of that file).
-
 ## Safety
 
 Front matter often comes from pull requests, a CMS or user uploads, so forematter treats it as untrusted.
@@ -126,8 +124,6 @@ npm install   # TypeScript is the only dev dependency
 npm test      # needs Node 22.18 or newer
 npm run build
 ```
-
-`bench/` holds the benchmark and a test that compares forematter with gray-matter. It has its own `package.json`, so the library itself stays dependency-free.
 
 ## License
 
