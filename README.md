@@ -1,5 +1,7 @@
 # forematter
 
+[![tests](https://github.com/dock90/forematter/actions/workflows/test.yml/badge.svg)](https://github.com/dock90/forematter/actions/workflows/test.yml)
+
 A fast, safe front matter parser with zero dependencies. A modern replacement for [gray-matter](https://github.com/jonschlinkert/gray-matter).
 
 ```sh
