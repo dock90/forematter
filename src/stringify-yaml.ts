@@ -119,7 +119,7 @@ function value(v: unknown, indent: string, depth: number, inSeq: boolean): strin
 			if (v !== v) return ' .nan\n';
 			if (v === Infinity) return ' .inf\n';
 			if (v === -Infinity) return ' -.inf\n';
-			return ' ' + (Object.is(v, -0) ? '-0' : String(v)) + '\n';
+			return ' ' + (Object.is(v, -0) ? '-0.0' : String(v)) + '\n';
 		case 'boolean':
 			return v ? ' true\n' : ' false\n';
 		case 'bigint':

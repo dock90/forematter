@@ -54,6 +54,13 @@ let keyQuoted = false;
 /** Set by the !!str tag: the next plain scalar is kept as a string. */
 let rawScalar = false;
 let allowMarker = true;
+// Search caches for scanPlain: the result is valid for any start in [from, at].
+let colonFrom = 0;
+let colonAt = -1;
+let hashFrom = 0;
+let hashAt = -1;
+let breakFrom = 0;
+let breakAt = -1;
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -72,6 +79,8 @@ export function parseYaml(input: string): unknown {
 	anchors = undefined;
 	rawScalar = false;
 	allowMarker = true;
+	colonAt = hashAt = breakAt = -1;
+	colonFrom = hashFrom = breakFrom = 0;
 	try {
 		skipBlank();
 		if (ind === -1) return undefined;
@@ -462,29 +471,62 @@ function parseKey(): string {
 }
 
 /**
+ * The next position of a character at or after p, or `end` when there is none.
+ * Each search result is cached, so that scanning many short lines never walks
+ * the same stretch of input twice and total work stays linear.
+ */
+function nextColon(p: number): number {
+	if (p < colonFrom || p > colonAt) {
+		const at = src.indexOf(':', p);
+		colonFrom = p;
+		colonAt = at === -1 ? end : at;
+	}
+	return colonAt;
+}
+
+function nextHash(p: number): number {
+	if (p < hashFrom || p > hashAt) {
+		const at = src.indexOf('#', p);
+		hashFrom = p;
+		hashAt = at === -1 ? end : at;
+	}
+	return hashAt;
+}
+
+function nextBreak(p: number): number {
+	if (p < breakFrom || p > breakAt) {
+		const at = src.indexOf('\n', p);
+		breakFrom = p;
+		breakAt = at === -1 ? end : at;
+	}
+	return breakAt;
+}
+
+/**
  * Scan one line of a plain scalar starting at p. Returns where it ends and
- * records why in `stop`.
+ * records why in `stop`: a ":" that starts a mapping value, a " #" comment,
+ * or the end of the line.
  */
 function scanPlain(p: number): number {
-	for (;;) {
-		const c = src.charCodeAt(p);
-		if (c === 58) {
-			if (isSep(src.charCodeAt(p + 1))) {
-				stop = STOP_KEY;
-				return p;
-			}
-		} else if (c === 35) {
-			const b = src.charCodeAt(p - 1);
-			if (b === 32 || b === 9) {
-				stop = STOP_COMMENT;
-				return p;
-			}
-		} else if (c === 10 || c !== c) {
-			stop = STOP_END;
-			return p;
-		}
-		p++;
+	const eol = nextBreak(p);
+	let k = nextColon(p);
+	while (k < eol && !isSep(src.charCodeAt(k + 1))) k = nextColon(k + 1);
+	let h = nextHash(p);
+	while (h < eol) {
+		const b = src.charCodeAt(h - 1);
+		if (b === 32 || b === 9) break;
+		h = nextHash(h + 1);
 	}
+	if (k < eol && k < h) {
+		stop = STOP_KEY;
+		return k;
+	}
+	if (h < eol) {
+		stop = STOP_COMMENT;
+		return h;
+	}
+	stop = STOP_END;
+	return eol;
 }
 
 /**
@@ -602,7 +644,8 @@ function resolveNumber(s: string): unknown {
 			}
 		}
 		while (c >= 48 && c <= 57) c = s.charCodeAt(++i);
-		if (i === n) return Number(s);
+		// "|| 0" because an integer has no negative zero
+		if (i === n) return Number(s) || 0;
 		if (c === 45 && i === 4 && n >= 10) return resolveTimestamp(s);
 		if (c === 46) {
 			c = s.charCodeAt(++i);
@@ -623,7 +666,38 @@ function resolveNumber(s: string): unknown {
 const DATE = /^(\d{4})-(\d\d)-(\d\d)$/;
 const DATE_TIME = /^(\d{4})-(\d\d?)-(\d\d?)(?:[Tt]|[ \t]+)(\d\d?):(\d\d):(\d\d)(?:\.(\d*))?(?:[ \t]*(?:Z|([-+])(\d\d?)(?::(\d\d))?))?$/;
 
+/** Two digits at i as a number, or NaN. */
+function twoDigits(s: string, i: number): number {
+	const a = s.charCodeAt(i) - 48;
+	const b = s.charCodeAt(i + 1) - 48;
+	return a >= 0 && a <= 9 && b >= 0 && b <= 9 ? a * 10 + b : NaN;
+}
+
 function resolveTimestamp(s: string): unknown {
+	// Fast paths for YYYY-MM-DD and YYYY-MM-DDTHH:MM:SS[.mmm]Z, with no regular
+	// expression. The caller has checked the four year digits and the first "-".
+	const n = s.length;
+	if (s.charCodeAt(7) === 45) {
+		const year = twoDigits(s, 0) * 100 + twoDigits(s, 2);
+		const month = twoDigits(s, 5);
+		const day = twoDigits(s, 8);
+		if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+			if (n === 10) return new Date(Date.UTC(year, month - 1, day));
+			if ((n === 20 || n === 24) && s.charCodeAt(10) === 84 && s.charCodeAt(13) === 58 && s.charCodeAt(16) === 58 && s.charCodeAt(n - 1) === 90) {
+				const hour = twoDigits(s, 11);
+				const minute = twoDigits(s, 14);
+				const second = twoDigits(s, 17);
+				let ms = 0;
+				let ok = hour <= 23 && minute <= 59 && second <= 60;
+				if (n === 24) {
+					const unit = s.charCodeAt(22) - 48;
+					ms = twoDigits(s, 20) * 10 + unit;
+					ok = ok && s.charCodeAt(19) === 46 && unit >= 0 && unit <= 9 && ms === ms;
+				}
+				if (ok) return new Date(Date.UTC(year, month - 1, day, hour, minute, second, ms));
+			}
+		}
+	}
 	let m = DATE.exec(s);
 	if (m !== null) {
 		const month = +m[2]!;

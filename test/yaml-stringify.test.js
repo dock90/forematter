@@ -134,7 +134,7 @@ test('multi-line strings', () => {
 });
 
 test('numbers, dates and other values', () => {
-	assert.equal(stringifyYaml({ a: 1, b: -2.5, c: 1e21, d: 1e-7, e: NaN, f: Infinity, g: -Infinity, h: -0 }), 'a: 1\nb: -2.5\nc: 1e+21\nd: 1e-7\ne: .nan\nf: .inf\ng: -.inf\nh: -0\n');
+	assert.equal(stringifyYaml({ a: 1, b: -2.5, c: 1e21, d: 1e-7, e: NaN, f: Infinity, g: -Infinity, h: -0 }), 'a: 1\nb: -2.5\nc: 1e+21\nd: 1e-7\ne: .nan\nf: .inf\ng: -.inf\nh: -0.0\n');
 	roundTrip({ a: 1, b: -2.5, c: 1e21, d: 1e-7, e: NaN, f: Infinity, g: -Infinity, h: -0, i: Number.MAX_SAFE_INTEGER, j: 5e-324 });
 	roundTrip({ d: new Date('1999-12-31T23:59:59.999Z'), e: [new Date(0)] });
 	assert.equal(stringifyYaml({ d: new Date(NaN) }), 'd: null\n');

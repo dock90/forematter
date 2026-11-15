@@ -125,7 +125,13 @@ function matter<T = Record<string, any>>(input: string | Uint8Array, options?: O
 	else throw new TypeError('expected input to be a string or a Uint8Array');
 	if (str.charCodeAt(0) === 0xfeff) str = str.slice(1);
 
-	const [open, close] = getDelimiters(options);
+	let open = '---';
+	let close = '---';
+	let needle = '\n---';
+	if (options !== undefined && options.delimiters !== undefined) {
+		[open, close] = getDelimiters(options);
+		needle = '\n' + close;
+	}
 	const file: MatterFile<any> = {
 		data: {},
 		content: str,
@@ -159,7 +165,6 @@ function matter<T = Record<string, any>>(input: string | Uint8Array, options?: O
 	}
 
 	// The closing delimiter must be on a line of its own.
-	const needle = '\n' + close;
 	let at = str.indexOf(needle, eol);
 	let after = len;
 	while (at !== -1) {
@@ -178,7 +183,8 @@ function matter<T = Record<string, any>>(input: string | Uint8Array, options?: O
 		at = str.indexOf(needle, at + 1);
 	}
 
-	const block = at === -1 ? str.slice(eol) : str.slice(eol, at);
+	const start = str.charCodeAt(eol - 1) === 13 ? eol - 1 : eol;
+	const block = at === -1 ? str.slice(start) : str.slice(start, at);
 	file.matter = block;
 	file.content = at === -1 ? '' : str.slice(after);
 	if (isBlank(block)) {

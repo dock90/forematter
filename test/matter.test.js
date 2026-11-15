@@ -62,6 +62,7 @@ test('CRLF line endings and a byte order mark', () => {
 	const file = matter('\ufeff---\r\ntitle: Home\r\nlist:\r\n  - a\r\n---\r\nbody\r\n');
 	assert.deepStrictEqual(file.data, { title: 'Home', list: ['a'] });
 	assert.equal(file.content, 'body\r\n');
+	assert.equal(file.matter, '\r\ntitle: Home\r\nlist:\r\n  - a\r');
 });
 
 test('binary input', () => {
