@@ -1,6 +1,10 @@
 # forematter
 
-Fast, safe front matter parsing with zero dependencies. A modern replacement for [gray-matter](https://github.com/jonschlinkert/gray-matter).
+A fast, safe front matter parser with zero dependencies. A modern replacement for [gray-matter](https://github.com/jonschlinkert/gray-matter).
+
+```sh
+npm install forematter
+```
 
 ```js
 import matter from 'forematter';
@@ -11,66 +15,42 @@ file.data; // { title: 'Hello world', tags: ['news', 'launch'] }
 file.content; // '# Hello\n'
 ```
 
-## Why
+## Why use it
 
-gray-matter is on most markdown-based sites and has not had a release since 2021. forematter does the same job with:
-
-- **No dependencies.** gray-matter installs 9 other packages. forematter installs none, including its own YAML parser and serializer.
-- **Speed.** 3 to 6 times faster than gray-matter at parsing, 2.8 times faster at writing. See [benchmarks](docs/04-benchmarks.md).
-- **Safety by default.** It never evaluates code, cannot be used for prototype pollution, parses in linear time, and caps nesting depth and alias expansion. See [security](docs/02-security.md).
-- **TypeScript types** built in, ES modules, and no result caching between calls.
-
-It keeps gray-matter's API for the common paths, so most projects only change the import. See [migrating from gray-matter](docs/03-migrating-from-gray-matter.md).
-
-## Install
-
-```sh
-npm install forematter
-```
-
-Requires Node 18 or newer. It also runs in browsers, Deno, Bun and edge runtimes, since it uses nothing but standard JavaScript.
+- **Zero dependencies.** gray-matter installs 9 other packages. forematter installs none: it has its own YAML parser.
+- **Fast.** 3 to 12 times faster than gray-matter at reading (see below).
+- **Safe.** It never runs code from a file, and it is built to withstand input designed to hang a parser or tamper with your objects.
+- **Compatible.** On 17,436 real pages from the Astro docs and MDN, it returns exactly what gray-matter returns for every one.
+- **Modern.** TypeScript types included, ES modules, Node 18 and newer.
 
 ## Usage
 
-### Parse
+### Read
 
 ```js
-import matter from 'forematter';
-
-const file = matter(source);
+const file = matter(source); // a string, Buffer or Uint8Array
 ```
 
-`source` is a string or a `Uint8Array` (a Node `Buffer` works). The result:
-
-| Property | Description |
+| Property | What it is |
 | --- | --- |
-| `data` | The parsed front matter. `{}` when there is none. |
-| `content` | The input with the front matter block removed. |
-| `excerpt` | The excerpt, when the `excerpt` option is used. Otherwise `''`. |
-| `language` | The front matter language, for example `'yaml'`. |
-| `matter` | The raw, unparsed front matter block. |
-| `isEmpty` | `true` when a front matter block is present but has no content. |
+| `data` | The parsed front matter. `{}` if there is none. |
+| `content` | Everything after the front matter. |
+| `excerpt` | The excerpt, if you asked for one. |
+| `language` | `'yaml'`, `'json'`, or the name of your own engine. |
+| `matter` | The raw front matter text. |
+| `isEmpty` | `true` if the front matter block is there but empty. |
 
-Front matter is YAML by default. JSON works by naming it after the opening delimiter:
+Front matter is YAML. For JSON, name it on the first line: `---json`.
 
-```
----json
-{ "title": "Hello world" }
----
-```
-
-With TypeScript, pass the shape of your front matter:
+With TypeScript, describe your front matter and `data` is typed:
 
 ```ts
 const file = matter<{ title: string; tags?: string[] }>(source);
-file.data.title; // string
 ```
 
-### Stringify
+### Write
 
 ```js
-import matter from 'forematter';
-
 matter.stringify('# Hello\n', { title: 'Hello world' });
 // ---
 // title: Hello world
@@ -78,69 +58,76 @@ matter.stringify('# Hello\n', { title: 'Hello world' });
 // # Hello
 ```
 
-If the first argument already has front matter, the new data is merged over it.
-
 ### Options
 
 ```js
 matter(source, options);
 ```
 
-| Option | Description |
+| Option | What it does |
 | --- | --- |
-| `language` | The language when the opening delimiter does not name one. Default `'yaml'`. |
-| `delimiters` | A string for both ends, or an `[open, close]` pair. Default `'---'`. |
-| `excerpt` | `true` to take the content up to the first delimiter as the excerpt, a string to use as the separator, or a function `(file, options) => void` that sets `file.excerpt`. |
-| `excerpt_separator` | A separator for the excerpt. Can also be set in the front matter itself. |
-| `engines` | Parsers for other languages, or replacements for the built in ones. |
+| `excerpt` | `true` takes the content up to the first `---` as the excerpt. A string sets the separator. A function sets `file.excerpt` itself. |
+| `excerpt_separator` | The excerpt separator. Can also be set in the front matter. |
+| `delimiters` | A different delimiter, or an `[open, close]` pair. Default `'---'`. |
+| `language` | The language when the first line does not name one. Default `'yaml'`. |
+| `engines` | Other languages: `{ toml: { parse, stringify } }`. |
 
-Adding a language, for example TOML with a parser of your choice:
+Also exported: `stringify`, `test`, `language`, `parseYaml`, `stringifyYaml` and `YamlError`.
 
-```js
-import { parse, stringify } from 'your-toml-library';
+## Speed
 
-matter(source, { engines: { toml: { parse, stringify } } });
-```
+Documents per second on an Apple M4 Pro with Node 25, against gray-matter 4.0.3:
 
-### Other exports
+| | gray-matter | forematter | |
+| --- | ---: | ---: | ---: |
+| Typical blog post | 108,998 | 453,914 | 4.2x |
+| Three fields | 459,198 | 2,958,580 | 6.4x |
+| 205 lines of front matter | 12,195 | 41,376 | 3.4x |
+| Writing a blog post | 109,792 | 302,862 | 2.8x |
 
-```js
-import { matter, stringify, test, language, parseYaml, stringifyYaml, YamlError } from 'forematter';
-```
+On real sites the gap is wider: all 14,768 MDN pages parse in 10 ms against 80 ms, and all 2,668 Astro docs pages in 2 ms against 23 ms.
 
-- `test(source)` is `true` when the source starts with a front matter delimiter.
-- `language(source)` returns the language named after the opening delimiter.
-- `parseYaml(text)` and `stringifyYaml(data)` are the YAML parser and serializer on their own.
-- `YamlError` is thrown for invalid or unsupported YAML, with `line` and `column` properties.
+Reproduce the table with `node bench/bench.js` (see the top of that file).
 
-In CommonJS, on Node 20.19 or newer: `const { matter } = require('forematter')`.
+## Safety
 
-## Principles
+Front matter often comes from pull requests, a CMS or user uploads, so forematter treats it as untrusted.
 
-- **Zero dependencies, always.** Nothing to audit but this package.
-- **Never guess.** YAML that is invalid or outside the [supported subset](docs/01-yaml-support.md) throws a `YamlError` with a line and column. It is never silently read as something else.
-- **Never run code.** There is no JavaScript front matter engine and no tag that constructs objects.
-- **Stay linear.** The parser is a single pass scanner. Input size, not input shape, decides how long it takes.
+- **No code execution.** There is no `---js` engine and no YAML tag that builds objects. gray-matter runs `---js` front matter through `eval`.
+- **No prototype pollution.** A `__proto__` key is stored as plain data.
+- **Predictable speed.** The parser reads the input once, front to back, with no backtracking.
+- **Hard limits.** Nesting stops at 100 levels and alias expansion at 100,000 nodes, so "billion laughs" files are rejected.
+- **No guessing.** Duplicate keys and unsupported YAML throw a `YamlError` with a line and column.
 
-## Docs
+It does not escape the values it returns, and it has not had an independent security audit.
 
-| Doc | Contents |
-| --- | --- |
-| [01 YAML support](docs/01-yaml-support.md) | What the YAML parser and serializer handle, and what they reject |
-| [02 Security](docs/02-security.md) | The threat model and how each risk is handled |
-| [03 Migrating from gray-matter](docs/03-migrating-from-gray-matter.md) | What is the same and what is different |
-| [04 Benchmarks](docs/04-benchmarks.md) | Speed results and how to reproduce them |
+## Switching from gray-matter
+
+Change the import. In CommonJS, on Node 20.19 or newer, use `const { matter } = require('forematter')`.
+
+What is different:
+
+- **Numbers follow YAML 1.2.** `12:30:00` and `1_000` are strings, and `01234` is 1234. gray-matter reads these as 45000, 1000 and 668.
+- **The closing `---` must be on its own line.**
+- **`---js` front matter throws** unless you pass your own engine.
+- **Removed:** `matter.read()`, the `sections` option, the result cache, and `file.orig`.
+- **Keys keep their text.** The key in `1.0: x` is `'1.0'`, not `'1'`.
+
+## YAML support
+
+Everything front matter normally uses: nested maps and lists, `[a, b]` and `{k: v}`, quoted and multi-line strings, `|` and `>` blocks, comments, dates, anchors, aliases and `<<` merges.
+
+Rare YAML features throw an error and are never misread: `? ` complex keys, tags other than `!!str`, several documents in one file, and tabs as indentation.
 
 ## Development
 
 ```sh
-npm install        # TypeScript is the only development dependency
-npm test           # node --test, run against the TypeScript source
-npm run typecheck
-npm run build      # emits dist/
+npm install   # TypeScript is the only dev dependency
+npm test      # needs Node 22.18 or newer
+npm run build
 ```
 
-Tests need Node 22.18 or newer, which runs TypeScript directly. The comparison benchmark and the differential test against gray-matter live in `bench/` with their own `package.json`, so the library itself stays free of dependencies.
+`bench/` holds the benchmark and a test that compares forematter with gray-matter. It has its own `package.json`, so the library itself stays dependency-free.
 
 ## License
 

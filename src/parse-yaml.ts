@@ -3,7 +3,7 @@
  *
  * It is a single pass, hand-written scanner with no regular expressions on the
  * hot path, so parse time is linear in the input size. It covers the YAML that
- * front matter actually uses (see docs/01-yaml-support.md) and throws a
+ * front matter actually uses (see the README) and throws a
  * YamlError for anything it does not support. It never guesses.
  */
 

@@ -79,7 +79,7 @@ const yamlCorpus = [
 ];
 
 // Inputs where forematter differs from js-yaml 3 on purpose.
-// See docs/03-migrating-from-gray-matter.md.
+// See "Switching from gray-matter" in the README.
 const intentional = [
 	['a: 0123', { a: 123 }], // YAML 1.2: a leading zero is not octal
 	['a: 0o17', { a: 15 }], // YAML 1.2 octal
